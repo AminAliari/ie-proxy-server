@@ -48,6 +48,7 @@
     <Compile Include="ProxyServer.cs" />
     <Compile Include="Server.cs" />
     <Compile Include="ServerPool.cs" />
+    <Compile Include="StringCipher.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

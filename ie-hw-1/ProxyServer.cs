@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading;
 using System.Net.Sockets;
 using System.Collections.Generic;
+using EncryptStringSample;
 
 namespace ie_hw_1
 {
@@ -79,12 +80,12 @@ namespace ie_hw_1
                         continue;
                     }
 
-                    var request_bytes = Manager.sSingleton.StringToBytes(request);
+                    var request_bytes = Manager.sSingleton.StringToBytes(StringCipher.Encrypt(request, Manager.SERVER_PROXY_KEY));
                     connection.pClient.Send(request_bytes, request_bytes.Length, "localhost", connection.pServerPort);
 
                     var received_bytes = connection.pClient.Receive(ref connection.pEndPoint);
+                    var response = StringCipher.Decrypt(Manager.sSingleton.ByteToString(received_bytes), Manager.SERVER_PROXY_KEY);
 
-                    string response = Manager.sSingleton.ByteToString(received_bytes);
                     Manager.sSingleton.SendToSocket(client, response);
                 }
                 catch (Exception e)

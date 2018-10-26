@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
 
@@ -14,6 +15,8 @@ namespace ie_hw_1
 
         public const string CREATE_SERVER = "CREATE_SERVER|";
         public const string SERVER_CREATED = "SERVER_CREATED|";
+
+        public static string SERVER_PROXY_KEY = "null";
 
         private const bool kIsDebug = true;
         #endregion
@@ -44,17 +47,43 @@ namespace ie_hw_1
                 var input = ReadLine();
                 if (input == "1")
                 {
-                    new ServerPool().Start();
-                    print("[event] server pool was initialized...\n");
-                    break;
+                    try
+                    {
+                        LoadServerKey();
+                        new ServerPool().Start();
+                        print("[event] server pool was initialized...\n");
+                        break;
+                    }
+                    catch
+                    {
+                        print("[error] server key not found. make sure it is in the right place and try again.");
+                    }
                 }
                 else if (input == "2")
                 {
-                    new ProxyServer().Start();
-                    print("[event] proxy server was initialized...\n");
-                    break;
+                    try
+                    {
+                        LoadProxyKey();
+                        new ProxyServer().Start();
+                        print("[event] proxy server was initialized...\n");
+                        break;
+                    }
+                    catch
+                    {
+                        print("[error] proxy server key not found. make sure it is in the right place and try again.");
+                    }
                 }
             }
+        }
+
+        public static void LoadServerKey()
+        { 
+            SERVER_PROXY_KEY =  File.ReadAllText("server_key");
+        }
+
+        public static void LoadProxyKey()
+        {
+            SERVER_PROXY_KEY = File.ReadAllText("proxy_key");
         }
 
         public string ReadFromSocket(Socket socket)

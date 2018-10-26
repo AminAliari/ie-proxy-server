@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading;
 using System.Net.Sockets;
+using EncryptStringSample;
 
 namespace ie_hw_1
 {
@@ -42,11 +43,11 @@ namespace ie_hw_1
                 {
                     var received_bytes = client_.Receive(ref ep_for_client_);
 
-                    string request = Manager.sSingleton.ByteToString(received_bytes);
+                    string request = StringCipher.Decrypt(Manager.sSingleton.ByteToString(received_bytes), Manager.SERVER_PROXY_KEY);
 
                     if (string.IsNullOrEmpty(request)) { throw new Exception("empty request"); }
 
-                    var response = Manager.sSingleton.StringToBytes(MakeResponse(request));
+                    var response = Manager.sSingleton.StringToBytes(StringCipher.Encrypt(MakeResponse(request), Manager.SERVER_PROXY_KEY));
 
                     client_.Send(response, response.Length, ep_for_client_);
                 }
