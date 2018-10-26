@@ -53,9 +53,8 @@ namespace ie_hw_1
                     {
                         servers_count_++;
                         var ports = data.Split('|');
-                        var server_broadcast_port = int.Parse(ports[1]);
-                        var client_broadcast_port = int.Parse(ports[2]);
-                        CreateServer(server_broadcast_port, client_broadcast_port);
+                        var server_port = int.Parse(ports[1]);
+                        CreateServer(server_port);
                     }
                 }
                 catch (Exception e)
@@ -65,9 +64,9 @@ namespace ie_hw_1
             }
         }
 
-        private void CreateServer(int server_broadcast_port, int client_broadcast_port)
+        private void CreateServer(int server_port)
         {
-            new Server(() => Manager.sSingleton.SendToSocket(proxy_server_, Manager.SERVER_CREATED)).Start(server_broadcast_port, client_broadcast_port);
+            new Server(() => Manager.sSingleton.SendToSocket(proxy_server_, Manager.SERVER_CREATED)).Start(server_port);
         }
     }
 }

@@ -6,19 +6,15 @@ namespace ie_hw_1
     class Connection
     {
 
-        public int pServerBroadcastPort, pClientBroadcastPort;
-        public IPEndPoint pEpForServer, pEpForClient;
-        public UdpClient pListenerForServer;
-        public Socket pWriteSocket;
+        public int pServerPort;
+        public UdpClient pClient;
+        public IPEndPoint pEndPoint;
 
-        public Connection(int server_broadcast_port, int client_broadcast_port, IPEndPoint ep_for_server, IPEndPoint ep_for_client, UdpClient listener_for_server, Socket write_socket)
+        public Connection(int server_port, UdpClient client)
         {
-            pServerBroadcastPort = server_broadcast_port;
-            pClientBroadcastPort = client_broadcast_port;
-            pEpForServer = ep_for_server;
-            pEpForClient = ep_for_client;
-            pListenerForServer = listener_for_server;
-            pWriteSocket = write_socket;
+            pServerPort = server_port;
+            pClient = client;
+            pEndPoint = new IPEndPoint(IPAddress.Any, server_port);
         }
     }
 }

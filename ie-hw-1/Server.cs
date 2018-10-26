@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net;
-using System.Text;
 using System.Threading;
 using System.Net.Sockets;
 
@@ -13,8 +12,7 @@ namespace ie_hw_1
         public delegate void OnServerCreated();
         public OnServerCreated on_server_created;
 
-        Socket write_socket_;
-        UdpClient listener_for_client_;
+        UdpClient client_;
         IPEndPoint ep_for_server_, ep_for_client_;
 
         public Server(OnServerCreated on_server_created)
@@ -23,45 +21,48 @@ namespace ie_hw_1
             this.on_server_created = on_server_created;
         }
 
-        public void Start(int server_broadcast_port, int client_broadcast_port)
+        public void Start(int server_broadcast_port)
         {
-            listener_for_client_ = new UdpClient(client_broadcast_port);
-            ep_for_client_ = new IPEndPoint(IPAddress.Broadcast, client_broadcast_port);
+            ep_for_server_ = new IPEndPoint(IPAddress.Any, server_broadcast_port);
+            client_ = new UdpClient(ep_for_server_);
+            //client_.ExclusiveAddressUse = false;
 
-            write_socket_ = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            ep_for_server_ = new IPEndPoint(IPAddress.Broadcast, server_broadcast_port);
+            ep_for_client_ = new IPEndPoint(IPAddress.Any, 0);
 
-            on_server_created();
             new Thread(HandleClient).Start();
         }
 
         private void HandleClient()
         {
+            on_server_created();
+
             while (pEnable)
             {
                 try
                 {
-                    var received_bytes = listener_for_client_.Receive(ref ep_for_client_);
+                    var received_bytes = client_.Receive(ref ep_for_client_);
 
-                    string request = Encoding.UTF8.GetString(received_bytes);
+                    string request = Manager.sSingleton.ByteToString(received_bytes);
 
                     if (string.IsNullOrEmpty(request)) { throw new Exception("empty request"); }
 
-                    var response = Encoding.UTF8.GetBytes(MakeResponse(request));
-                    write_socket_.SendTo(response, ep_for_server_);
+                    var response = Manager.sSingleton.StringToBytes(MakeResponse(request));
+
+                    client_.Send(response, response.Length, ep_for_client_);
                 }
                 catch (Exception e)
                 {
                     Manager.print("[error] server: " + e.Message);
+                    break;
                 }
             }
         }
 
         private string MakeResponse(string request)
         {
-            request = $"<html><body><p1>server answer:<p1/><br>{request}<body/><html/>";
+            request = $"<html><body><p1>[server answer]<p1/><br><br>{ request}<br><br><p1>[server answer]<p1/><body/><html/>";
 
-            var content_len = Encoding.UTF8.GetBytes(request).Length;
+            var content_len = Manager.sSingleton.StringToBytes(request).Length;
 
             var header = $@"HTTP/1.1 200 OK
                         Date: Sun, 10 Oct 2010 23:26:07 GMT

@@ -64,13 +64,13 @@ namespace ie_hw_1
 
         public void SendToSocket(Socket socket, string data)
         {
-            var data_bytes = Encoding.UTF8.GetBytes(data);
+            var data_bytes = StringToBytes(data);
             socket.Send(data_bytes, data_bytes.Length, SocketFlags.None);
         }
 
         public void SendToTcpClient(TcpClient tcp_client, string data)
         {
-            var data_bytes = Encoding.UTF8.GetBytes(data);
+            var data_bytes = StringToBytes(data);
             tcp_client.GetStream().Write(data_bytes, 0, data_bytes.Length);
         }
 
@@ -88,14 +88,21 @@ namespace ie_hw_1
             do
             {
                 received_bytes_length = ns.Read(buffer, 0, buffer.Length);
-                data += Encoding.UTF8.GetString(buffer);
+                data += ByteToString(buffer);
             } while (received_bytes_length == buffer.Length);
-
-            ns.Close();
 
             return data;
         }
 
+        public string ByteToString(byte[] bytes)
+        {
+            return Encoding.UTF8.GetString(bytes);
+        }
+
+        public byte[] StringToBytes(string str)
+        {
+            return Encoding.UTF8.GetBytes(str);
+        }
 
         public static int GetPort()
         {

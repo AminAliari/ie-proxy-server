@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net;
-using System.Text;
 using System.Threading;
 using System.Net.Sockets;
 using System.Collections.Generic;
@@ -11,7 +10,7 @@ namespace ie_hw_1
     {
         public bool pEnable;
 
-        private Dictionary<Socket, int> clients_;
+        private Dictionary<int, Socket> clients_;
         private Dictionary<int, Connection> servers_;
 
         private Socket server_pool_;
@@ -19,7 +18,7 @@ namespace ie_hw_1
         public ProxyServer()
         {
             pEnable = true;
-            clients_ = new Dictionary<Socket, int>();
+            clients_ = new Dictionary<int, Socket>();
             servers_ = new Dictionary<int, Connection>();
         }
 
@@ -45,30 +44,32 @@ namespace ie_hw_1
 
                 var client = listener.AcceptSocket();
 
-                var server_listen_port = GetServer();
-                if (server_listen_port == -1)
+                var server_port = GetServer();
+                if (server_port == -1)
                 {
                     Manager.print("[error] could not make a connection for client to server.");
                     continue;
                 }
 
-                clients_.Add(client, server_listen_port);
+                clients_.Add(server_port, client);
 
                 var client_thread = new Thread(ThreadHandleClient);
-                client_thread.Start(client);
+                client_thread.Start(server_port);
             }
             listener.Stop();
         }
 
         private void ThreadHandleClient(object o)
         {
+            Thread.Sleep(1000);
+
             while (pEnable)
             {
                 try
                 {
-                    var client = (Socket)o;
-                    var server_listen_port = clients_[client];
-                    var connection = servers_[server_listen_port];
+                    var server_port = (int)o;
+                    var client = clients_[server_port];
+                    var connection = servers_[server_port];
 
                     var request = Manager.sSingleton.ReadFromSocket(client);
 
@@ -78,17 +79,18 @@ namespace ie_hw_1
                         continue;
                     }
 
-                    var request_bytes = Encoding.UTF8.GetBytes(request);
-                    connection.pWriteSocket.SendTo(request_bytes, connection.pEpForClient);
+                    var request_bytes = Manager.sSingleton.StringToBytes(request);
+                    connection.pClient.Send(request_bytes, request_bytes.Length, "localhost", connection.pServerPort);
 
-                    var received_bytes = connection.pListenerForServer.Receive(ref connection.pEpForServer);
-                    string response = Encoding.UTF8.GetString(received_bytes);
+                    var received_bytes = connection.pClient.Receive(ref connection.pEndPoint);
 
+                    string response = Manager.sSingleton.ByteToString(received_bytes);
                     Manager.sSingleton.SendToSocket(client, response);
                 }
                 catch (Exception e)
                 {
                     Manager.print("[error] proxy server: " + e.Message);
+                    break;
                 }
             }
         }
@@ -101,26 +103,22 @@ namespace ie_hw_1
 
         private int GetServer()
         {
-            var server_broadcast_port = Manager.GetPort();
-            var client_broadcast_port = Manager.GetPort();
+            var server_port = Manager.GetPort();
+            var client_port = Manager.GetPort();
 
-            Manager.sSingleton.SendToSocket(server_pool_, Manager.CREATE_SERVER + server_broadcast_port + "|" + client_broadcast_port);
+            Manager.sSingleton.SendToSocket(server_pool_, Manager.CREATE_SERVER + server_port);
 
             var data_from_server_pool = Manager.sSingleton.ReadFromSocket(server_pool_);
 
             var decided_port = -1;
             if (data_from_server_pool.StartsWith(Manager.SERVER_CREATED))
             {
-                var listener_for_server = new UdpClient(server_broadcast_port);
-                var ep_for_client_ = new IPEndPoint(IPAddress.Broadcast, client_broadcast_port);
+                var client = new UdpClient(client_port);
 
-                var write_socket_ = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-                var ep_for_server_ = new IPEndPoint(IPAddress.Broadcast, server_broadcast_port);
+                var connection = new Connection(server_port, client);
+                servers_.Add(server_port, connection);
 
-                var connection = new Connection(server_broadcast_port, client_broadcast_port, ep_for_server_, ep_for_client_, listener_for_server, write_socket_);
-                servers_.Add(server_broadcast_port, connection);
-
-                decided_port = server_broadcast_port;
+                decided_port = server_port;
             }
             return decided_port;
         }
