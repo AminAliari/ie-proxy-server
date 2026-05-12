@@ -12,6 +12,7 @@ namespace ie_hw_1
         public const int kServerPoolPort = kProxyPort + 1;
         public const int kMaxClient = 100;
         public const int kBufferSize = 2048;
+        public const int kSocketTimeoutMs = 5000;
 
         public const string CREATE_SERVER = "CREATE_SERVER|";
         public const string SERVER_CREATED = "SERVER_CREATED|";
@@ -37,6 +38,7 @@ namespace ie_hw_1
         #endregion
 
         private static int init_port_ = kProxyPort + 2;
+        private static readonly object port_lock_ = new object();
 
         static void Main(string[] args)
         {
@@ -77,8 +79,8 @@ namespace ie_hw_1
         }
 
         public static void LoadServerKey()
-        { 
-            SERVER_PROXY_KEY =  File.ReadAllText("server_key");
+        {
+            SERVER_PROXY_KEY = File.ReadAllText("server_key");
         }
 
         public static void LoadProxyKey()
@@ -110,17 +112,21 @@ namespace ie_hw_1
 
         private string ReadFromNetworkStream(NetworkStream ns)
         {
-            var data = "";
             var buffer = new byte[kBufferSize];
-            var received_bytes_length = 0;
+            var data = new StringBuilder();
+            int received_bytes_length;
 
             do
             {
                 received_bytes_length = ns.Read(buffer, 0, buffer.Length);
-                data += ByteToString(buffer);
+                if (received_bytes_length <= 0)
+                {
+                    break;
+                }
+                data.Append(Encoding.UTF8.GetString(buffer, 0, received_bytes_length));
             } while (received_bytes_length == buffer.Length);
 
-            return data;
+            return data.ToString();
         }
 
         public string ByteToString(byte[] bytes)
@@ -135,8 +141,11 @@ namespace ie_hw_1
 
         public static int GetPort()
         {
-            init_port_++;
-            return init_port_;
+            lock (port_lock_)
+            {
+                init_port_++;
+                return init_port_;
+            }
         }
 
         public static void print(object o)
